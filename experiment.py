@@ -530,39 +530,69 @@ def plot_wl_by_length(n_max: int = 100, save_path: str | None = None):
 
 
 def plot_area_utilization(n_max: int = 100, save_path: str | None = None):
-    """Colormap: 3D area ratio = max(AT, AB) / (AT + AB) for any partition sizes."""
+    """Colormap: 3D/2D area ratio = (AT+AB-AAND)/(AT+AB)
+    Two degrees of freedom: area proportion + overlap quality (= AAND/min(AT,AB))."""
     try:
         import matplotlib.pyplot as plt
         import numpy as np
     except ImportError:
         return
 
-    grid = np.arange(1, 51)
-    AT_m, AB_m = np.meshgrid(grid, grid)
-    ratio_map = np.maximum(AT_m, AB_m) / (AT_m + AB_m)
+    # x-axis: AT fraction = AT/(AT+AB), from 0 to 1
+    # y-axis: overlap quality = AAND / min(AT,AB), from 0 (fully misaligned) to 1 (perfectly stacked)
+    # color: ratio = (AT+AB-AAND)/(AT+AB)
+
+    ft = np.linspace(0.01, 0.99, 100)        # AT fraction
+    ov = np.linspace(0.0, 1.0, 101)           # overlap quality
+    F, O = np.meshgrid(ft, ov)
+
+    # For given AT fraction f and total area S=AT+AB:
+    # AT = f*S, AB = (1-f)*S
+    # AAND = O * min(AT, AB) = O * min(f, 1-f) * S
+    # ratio = (S - O*min(f,1-f)*S) / S = 1 - O*min(f,1-f)
+    ratio = 1 - O * np.minimum(F, 1 - F)
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.5))
 
-    im = ax1.pcolormesh(AT_m, AB_m, ratio_map, shading='auto', cmap='RdYlGn_r', vmin=0.5, vmax=1.0)
-    ax1.set_xlabel("AT (Die area)"); ax1.set_ylabel("AB (Die area)")
-    ax1.set_title("3D/2D Area Ratio = max(AT,AB) / (AT+AB)")
-    cbar = fig.colorbar(im, ax=ax1, label="Ratio (lower is better)")
-    # Overlay actual N data
-    ATs = []; ABs = []
+    im = ax1.pcolormesh(F, O, ratio, shading='auto', cmap='RdYlGn_r', vmin=0.5, vmax=1.0)
+    ax1.set_xlabel("AT / (AT+AB)  —  area proportion"); ax1.set_ylabel("AAND / min(AT,AB)  —  overlap quality")
+    ax1.set_title("3D/2D Area Ratio = (AT+AB−AAND) / (AT+AB)")
+    cbar = fig.colorbar(im, ax=ax1, label="Ratio (lower = better)")
+    # Labels
+    ax1.text(0.5, 1.02, 'perfectly stacked', ha='center', fontsize=7, color='gray')
+    ax1.text(0.5, -0.04, '50/50 split', ha='center', fontsize=7, color='gray')
+    ax1.text(0.01, 0.5, 'AT≪AB\nor AB≪AT', va='center', fontsize=7, color='gray', rotation=90)
+    ax1.text(0.99, 0.5, 'AT≫AB\nor AB≫AT', va='center', fontsize=7, color='gray', rotation=90)
+
+    # Overlay our actual N data: compute AT, AB from N, and AAND from actual shapes
+    ATs = []; ABs = []; AANDs = []
     for n in range(1, n_max + 1):
         c = math.ceil(n / 2); f = n - c
-        a, b = optimal_2d_dims(c); at = a * b
-        a2, b2 = optimal_2d_dims(f) if f > 0 else (0, 0); ab = a2 * b2
-        ATs.append(at); ABs.append(ab)
-    ax1.scatter(ATs, ABs, c='black', s=10, alpha=0.6, zorder=5)
-    ax1.plot([0, 50], [0, 50], 'k--', lw=0.5, alpha=0.3)
+        ra, ca = optimal_2d_dims(c); at = ra * ca
+        rb, cb = optimal_2d_dims(f) if f > 0 else (0, 0); ab = rb * cb
+        # AAND: actual overlap given the two bounding boxes
+        # Overlap area = min(ra,rb) * min(ca,cb)  (assuming aligned top-left)
+        # But user wants the general case, so for actual data:
+        # If one die is ra×ca and other is rb×cb, when stacked aligned:
+        # overlapping rows = min(ra, rb), overlapping cols = min(ca, cb)
+        if f > 0:
+            aoverlap = min(ra, rb) * min(ca, cb)
+        else:
+            aoverlap = 0
+        ATs.append(at); ABs.append(ab); AANDs.append(aoverlap)
 
-    ratios_N = [max(at, ab) / (at + ab) if at + ab > 0 else 1
-                for at, ab in zip(ATs, ABs)]
+    ft_vals = [at / (at + ab) if at + ab > 0 else 0.5 for at, ab in zip(ATs, ABs)]
+    ov_vals = [ao / min(at, ab) if min(at, ab) > 0 else 1 for at, ab, ao in zip(ATs, ABs, AANDs)]
+    ax1.scatter(ft_vals, ov_vals, c='black', s=10, alpha=0.7, zorder=5)
+
+    # Right: ratio vs N
+    ratios_N = [(at + ab - ao) / (at + ab) if at + ab > 0 else 1
+                for at, ab, ao in zip(ATs, ABs, AANDs)]
     ax2.plot(range(1, n_max + 1), ratios_N, 'b-', lw=1.2)
-    ax2.axhline(0.5, color='red', ls='--', lw=0.8, label='ideal (AT=AB)')
-    ax2.set_xlabel("N"); ax2.set_ylabel("max(AT,AB) / (AT+AB)")
-    ax2.set_title("Area Ratio vs N"); ax2.legend(); ax2.grid(True, alpha=0.3)
+    ax2.axhline(0.5, color='red', ls='--', lw=0.8, label='perfect alignment + 50/50')
+    ax2.set_xlabel("N"); ax2.set_ylabel("(AT+AB−AAND) / (AT+AB)")
+    ax2.set_title("Area Ratio vs N (actual 2-die data)"); ax2.legend()
+    ax2.grid(True, alpha=0.3)
     fig.tight_layout()
 
     if save_path:
