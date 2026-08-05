@@ -152,7 +152,7 @@ $$N_{max} = 4 \cdot D_{max} = 4 / p^2$$
 
 双 Die 堆叠中，net 分三类：Die 内 0、Die 内 1、跨 Die（=HB）。
 
-$$|\text{Intra}_0| = \frac{C(C-1)}{2},\quad |\text{Intra}_1| = \frac{F(F-1)}{2},\quad |\text{Cross}| = C \cdot F$$
+$$|Intra_0| = \frac{C(C-1)}{2},\quad |Intra_1| = \frac{F(F-1)}{2},\quad |Cross| = C \cdot F$$
 
 其中 $C = \lceil N/2 \rceil$，$F = \lfloor N/2 \rfloor$。
 
@@ -213,12 +213,14 @@ $$|\text{Intra}_0| = \frac{C(C-1)}{2},\quad |\text{Intra}_1| = \frac{F(F-1)}{2},
 双 Die 堆叠中，两 Die 的矩形形状可能不对齐。设上 Die 面积 $A_T$、下 Die 面积 $A_B$，它们的重叠区域为 $A_{\text{AND}}$（即两矩形交集的面积）。
 
 - 2D 总面积 = $A_T + A_B$
-- 3D 有效面积 = $A_T + A_B - A_{\text{AND}}$（两 Die 的并集，即 AOR）
-- 面积比 = $\frac{A_T + A_B - A_{\text{AND}}}{A_T + A_B}$
+- 3D 有效面积 = $A_T + A_B - A_{AND}$（两 Die 的并集，即 AOR）
+- 面积比：
+
+$$\frac{A_T + A_B - A_{AND}}{A_T + A_B}$$
 
 两个自由度：
 - **面积比例**：$A_T / (A_T + A_B)$，失衡越严重比值越差
-- **重叠质量**：$A_{\text{AND}} / \min(A_T, A_B)$，错位越大重叠越少、比值越差
+- **重叠质量**：$A_{AND} / \min(A_T, A_B)$，错位越大重叠越少、比值越差
 
 ![Area Utilization](output/plot_area_util.png)
 
