@@ -67,15 +67,9 @@ N 个**全互连**的标准单元（完全图 $K_N$，共 $N(N-1)/2$ 条 net）�
 
 ### 趋势解读
 
-N<7 时，层间曼哈顿距离（固定 +1）抵消了平面紧凑性提升，总 HPWL 不变。N≥7 后 3D 开始显现优势。收益整体随 N 增大而上升，但非单调——在完美平方 N 附近（如 9、16、25）会有局部回落，因为 2D 此时排成正方形已达最优。
-
-![Total HPWL](output/plot_wl.png)
-
-![Ratio](output/plot_ratio.png)
+N<7 时，层间曼哈顿距离（固定 +1）抵消了平面紧凑性提升，总 HPWL 不变。N≥7 后 3D 开始显现优势。收益随 N 增大整体上升：
 
 ![Reduction](output/plot_reduction.png)
-
-![Avg per Edge](output/plot_avg.png)
 
 ---
 
