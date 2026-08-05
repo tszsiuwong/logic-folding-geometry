@@ -279,6 +279,7 @@ def main():
     if do_plot:
         plot_results(results, save_path="output/plot.png")
         plot_hb_density(n_max, save_path="output/plot_hb.png")
+        plot_floorplan_n7(save_path="output/plot_fp_n7.png")
 
 
 def plot_hb_density(n_max: int = 100, save_path: str | None = None):
@@ -314,6 +315,79 @@ def plot_hb_density(n_max: int = 100, save_path: str | None = None):
         Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
         print(f"HB plot saved to {save_path}")
+    else:
+        plt.show()
+
+
+def plot_floorplan_n7(save_path: str | None = None):
+    """Draw the N=7 2D (2x4) vs 3D (2x2x2) floorplan comparison diagram."""
+    try:
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as mpatches
+    except ImportError:
+        return
+
+    def draw_grid(ax, rows, cols, positions, title, highlight_empty=True):
+        """Draw a grid with cells at given positions highlighted."""
+        ax.set_xlim(-0.5, cols + 0.5); ax.set_ylim(-0.5, rows + 0.5)
+        ax.set_xticks(range(cols)); ax.set_yticks(range(rows))
+        ax.set_xticklabels([]); ax.set_yticklabels([])
+        ax.tick_params(length=0)
+        # Draw all grid cells
+        for r in range(rows):
+            for c in range(cols):
+                rect = mpatches.Rectangle((c - 0.5, rows - 1 - r - 0.5), 1, 1,
+                                          fill=False, edgecolor='gray', linewidth=0.5)
+                ax.add_patch(rect)
+        # Highlight filled cells
+        for idx, (px, py) in enumerate(positions):
+            rect = mpatches.Rectangle((px - 0.5, rows - 1 - py - 0.5), 1, 1,
+                                      facecolor='#4A90D9', edgecolor='#2B5F8E', linewidth=1.5, alpha=0.85)
+            ax.add_patch(rect)
+            ax.text(px, rows - 1 - py, str(idx), ha='center', va='center',
+                    fontsize=10, fontweight='bold', color='white')
+        # Highlight empty cells
+        if highlight_empty:
+            filled = set(positions)
+            for r in range(rows):
+                for c in range(cols):
+                    if (c, r) not in filled and len(positions) < rows * cols:
+                        rect = mpatches.Rectangle((c - 0.5, rows - 1 - r - 0.5), 1, 1,
+                                                  facecolor='#F0F0F0', edgecolor='gray', linewidth=0.5)
+                        ax.add_patch(rect)
+        ax.set_title(title, fontsize=13, fontweight='bold')
+        ax.set_aspect('equal')
+
+    fig = plt.figure(figsize=(14, 5))
+
+    # --- 2D: 2x4 grid ---
+    p2 = pos_2d(7)
+    # p2 = [(0,0),(1,0),(2,0),(3,0),(0,1),(1,1),(2,1)]
+    ax2d = fig.add_subplot(1, 3, 1)
+    draw_grid(ax2d, 2, 4, p2, "2D Floorplan (2×4)\nN=7, HPWL=40")
+
+    # --- 3D Die 0 ---
+    p3 = pos_3d(7)
+    # Die 0: first 4 cells [(0,0,0),(1,0,0),(0,1,0),(1,1,0)]
+    die0 = [(x, y) for x, y, z in p3 if z == 0]
+    ax3d0 = fig.add_subplot(1, 3, 2)
+    draw_grid(ax3d0, 2, 2, die0, "3D Die 0 (z=0)\n4 cells, 2×2")
+
+    # --- 3D Die 1 ---
+    die1 = [(x, y) for x, y, z in p3 if z == 1]
+    ax3d1 = fig.add_subplot(1, 3, 3)
+    draw_grid(ax3d1, 2, 2, die1, "3D Die 1 (z=1)\n3 cells, 2×2")
+
+    # Arrows / annotations
+    fig.text(0.50, 0.02, "3D HPWL = 36  →  Reduction = 10.0%", ha='center',
+             fontsize=12, fontweight='bold', color='#2E7D32')
+
+    plt.tight_layout(rect=[0, 0.06, 1, 1])
+
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+        print(f"Floorplan diagram saved to {save_path}")
     else:
         plt.show()
 
