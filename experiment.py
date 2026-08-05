@@ -605,68 +605,50 @@ def plot_area_utilization(n_max: int = 100, save_path: str | None = None):
 
 
 def plot_aand_aor_diagram(save_path: str | None = None):
-    """Schematic: illustrate AAND (overlap) and AOR (union) for two misaligned dies."""
+    """Simple schematic: 2D = big rectangle; 3D = two offset rectangles, overlap = AAND."""
     try:
         import matplotlib.pyplot as plt
         import matplotlib.patches as mpatches
     except ImportError:
         return
 
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    ra, ca = 4, 5   # Die A (top)
+    rb, cb = 3, 4   # Die B (bottom)
 
-    ra, ca = 3, 4; rb, cb = 2, 3
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
-    # ── Left: Two dies separately ──
-    ax = axes[0]
-    ax.add_patch(mpatches.Rectangle((0, 0), ca, ra, facecolor='#4A90D9', edgecolor='#2B5F8E',
-                  linewidth=2, alpha=0.7))
-    ax.add_patch(mpatches.Rectangle((5.5, 0.5), cb, rb, facecolor='#E85D47', edgecolor='#B83A2E',
-                  linewidth=2, alpha=0.7))
-    ax.text(ca/2, ra/2, f'Die A\n{ra}x{ca}', ha='center', va='center', fontsize=12,
-            fontweight='bold', color='white')
-    ax.text(5.5+cb/2, 0.5+rb/2, f'Die B\n{rb}x{cb}', ha='center', va='center', fontsize=12,
-            fontweight='bold', color='white')
-    ax.set_xlim(-0.5, 10); ax.set_ylim(-0.5, 5)
-    ax.set_aspect('equal'); ax.axis('off')
-    ax.set_title('2D: Two separate dies\nAT + AB', fontsize=13, fontweight='bold')
+    # ── Left: 2D = 一个大的矩形 ──
+    ax1.add_patch(mpatches.Rectangle((0, 0), ca + cb, max(ra, rb),
+                  facecolor='#E8E8E8', edgecolor='#999', linewidth=2))
+    ax1.text((ca+cb)/2, max(ra,rb)/2, f'AT + AB\n= {ra}x{ca} + {rb}x{cb}\n= {ra*ca+rb*cb}',
+             ha='center', va='center', fontsize=14, fontweight='bold')
+    ax1.set_xlim(-0.5, ca+cb+0.5); ax1.set_ylim(-0.5, max(ra,rb)+0.5)
+    ax1.set_aspect('equal'); ax1.axis('off')
+    ax1.set_title('2D', fontsize=16, fontweight='bold')
 
-    # ── Middle: Stacked ──
-    ax = axes[1]
-    ax.add_patch(mpatches.Rectangle((0, 0), ca, ra, facecolor='#4A90D9', edgecolor='#2B5F8E',
-                  linewidth=2, alpha=0.4))
-    ax.add_patch(mpatches.Rectangle((0, 0), cb, rb, facecolor='#E85D47', edgecolor='#B83A2E',
-                  linewidth=2, alpha=0.4))
-    # AAND
-    aoverlap = min(ra, rb) * min(ca, cb)
-    ax.add_patch(mpatches.Rectangle((0, 0), min(ca, cb), min(ra, rb),
-                  facecolor='#7B2D8B', edgecolor='#5A1D6A', linewidth=2, alpha=0.6, hatch='///'))
-    ax.text(min(ca,cb)/2, min(ra,rb)/2, 'AAND', ha='center', va='center',
-            fontsize=12, fontweight='bold', color='white')
-    ax.text(ca/2, ra-0.3, 'Die A', ha='center', fontsize=9, color='#2B5F8E', fontweight='bold')
-    ax.text(cb+0.5, rb/2, 'Die B', ha='left', va='center', fontsize=9, color='#B83A2E', fontweight='bold')
-    ax.set_xlim(-0.5, 5.5); ax.set_ylim(-0.5, 4.5)
-    ax.set_aspect('equal'); ax.axis('off')
-    ax.set_title('3D Stacked\nAAND = overlap', fontsize=13, fontweight='bold')
+    # ── Right: 3D = 两个小矩形错开，重叠区 = AAND ──
+    dx, dy = 0.5, 0.5  # misalignment offset
+    # Die A
+    ax2.add_patch(mpatches.Rectangle((0, 0), ca, ra, facecolor='#4A90D9',
+                  edgecolor='#2B5F8E', linewidth=2, alpha=0.5))
+    ax2.text(ca/2, ra+0.15, f'Die A ({ra}x{ca})', ha='center', fontsize=10, color='#2B5F8E', fontweight='bold')
+    # Die B (offset)
+    ax2.add_patch(mpatches.Rectangle((dx, dy), cb, rb, facecolor='#E85D47',
+                  edgecolor='#B83A2E', linewidth=2, alpha=0.5))
+    ax2.text(dx+cb/2, dy-0.4, f'Die B ({rb}x{cb})', ha='center', fontsize=10, color='#B83A2E', fontweight='bold')
 
-    # ── Right: Formula ──
-    ax = axes[2]
-    at = ra * ca; ab = rb * cb
-    aor = at + ab - aoverlap
-    ratio_val = aor / (at + ab)
-    text = (
-        f"AT = {ra}x{ca} = {at}\n"
-        f"AB = {rb}x{cb} = {ab}\n"
-        f"AAND = min(ra,rb) x min(ca,cb) = {aoverlap}\n\n"
-        f"AOR = AT + AB - AAND\n"
-        f"     = {at} + {ab} - {aoverlap} = {aor}\n\n"
-        f"3D/2D = AOR / (AT+AB)\n"
-        f"       = {aor}/{at+ab} = {ratio_val:.3f}\n\n"
-        f"Area saved = {1-ratio_val:.0%}"
-    )
-    ax.text(0.05, 0.95, text, ha='left', va='top', fontsize=12, family='monospace',
-            transform=ax.transAxes)
-    ax.axis('off')
-    ax.set_title('Formula', fontsize=13, fontweight='bold')
+    # AAND: overlap = intersection of two rectangles
+    ao_w = max(0, min(ca, dx+cb) - max(0, dx))  # overlap width
+    ao_h = max(0, min(ra, dy+rb) - max(0, dy))  # overlap height
+    if ao_w > 0 and ao_h > 0:
+        ax2.add_patch(mpatches.Rectangle((dx, dy), ao_w, ao_h,
+                      facecolor='#7B2D8B', edgecolor='#5A1D6A', linewidth=2.5, alpha=0.6, hatch='////'))
+        ax2.text(dx+ao_w/2, dy+ao_h/2, f'AAND\n{int(ao_w)}x{int(ao_h)}={int(ao_w*ao_h)}',
+                 ha='center', va='center', fontsize=11, fontweight='bold', color='white')
+
+    ax2.set_xlim(-0.5, max(ca, dx+cb)+1); ax2.set_ylim(-1, max(ra, dy+rb)+0.8)
+    ax2.set_aspect('equal'); ax2.axis('off')
+    ax2.set_title('3D (stacked, misaligned)', fontsize=16, fontweight='bold')
 
     plt.tight_layout()
     if save_path:
