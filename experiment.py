@@ -281,7 +281,9 @@ def main():
         plot_hb_density(n_max, save_path="output/plot_hb.png")
         plot_floorplan_n7(save_path="output/plot_fp_n7.png")
         plot_net_breakdown(n_max, save_path="output/plot_net_breakdown.png")
+        plot_wl_by_length(n_max, save_path="output/plot_wl_by_length.png")
     print_net_breakdown(n_max)
+    print_wl_by_length(n_max)
 
 
 def plot_hb_density(n_max: int = 100, save_path: str | None = None):
@@ -452,6 +454,79 @@ def plot_net_breakdown(n_max: int = 100, save_path: str | None = None):
         print(f"Net breakdown plot saved to {save_path}")
     else:
         plt.show()
+
+
+def wl_by_length_analysis(n_max: int = 100):
+    """Group all nets by their 2D distance, compute average 3D/2D ratio per bucket."""
+    buckets = {}
+    for n in range(1, n_max + 1):
+        p2 = pos_2d(n); p3 = pos_3d(n)
+        for i in range(n):
+            for j in range(i + 1, n):
+                d2 = manhattan_2d(p2[i], p2[j])
+                if d2 == 0:
+                    continue
+                d3 = manhattan_3d(p3[i], p3[j])
+                bk = d2
+                if bk not in buckets:
+                    buckets[bk] = {"sum_d2": 0, "sum_d3": 0, "count": 0}
+                buckets[bk]["sum_d2"] += d2
+                buckets[bk]["sum_d3"] += d3
+                buckets[bk]["count"] += 1
+    return buckets
+
+
+def print_wl_by_length(n_max: int = 100):
+    buckets = wl_by_length_analysis(n_max)
+    print(f"\n{'='*65}")
+    print(f"WL Reduction by 2D Net Length (N=1..{n_max})")
+    print(f"{'='*65}")
+    print(f"{'2D dist':>7}  {'# nets':>8}  {'avg 2D':>7}  {'avg 3D':>7}  {'ratio':>7}  {'reduct%':>7}")
+    print("-" * 65)
+    for bk in sorted(buckets.keys()):
+        b = buckets[bk]
+        if b["count"] < 5:
+            continue
+        d2 = b["sum_d2"] / b["count"]
+        d3 = b["sum_d3"] / b["count"]
+        r = d3 / d2
+        print(f"{bk:>7}  {b['count']:>8}  {d2:>7.2f}  {d3:>7.2f}  {r:>7.4f}  {(1-r)*100:>6.1f}%")
+    print(f"{'='*65}")
+
+
+def plot_wl_by_length(n_max: int = 100, save_path: str | None = None):
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return
+
+    buckets = wl_by_length_analysis(n_max)
+    xs = sorted(buckets.keys())
+    max_x = max(k for k in xs if buckets[k]["count"] >= 5)
+    xs_f = [k for k in xs if k <= max_x]
+    reds = []
+    for bk in xs_f:
+        b = buckets[bk]
+        avg_d2 = b["sum_d2"] / b["count"]
+        avg_d3 = b["sum_d3"] / b["count"]
+        reds.append((1 - avg_d3 / avg_d2) * 100)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    colors = ["#E85D47" if r > 0 else "#4A90D9" for r in reds]
+    ax.bar(xs_f, reds, width=0.8, color=colors, edgecolor="white")
+    ax.axhline(0, color="black", linewidth=0.5)
+    ax.set_xlabel("2D net length (Manhattan distance)")
+    ax.set_ylabel("Wirelength reduction (%)")
+    ax.set_title("WL Reduction vs Original 2D Net Length")
+    ax.grid(True, alpha=0.3, axis="y")
+    fig.tight_layout()
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+        print(f"WL by length plot saved to {save_path}")
+    else:
+        plt.show()
+
 
 if __name__ == "__main__":
     main()
