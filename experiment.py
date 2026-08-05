@@ -627,7 +627,7 @@ def plot_aand_aor_diagram(save_path: str | None = None):
     ax1.set_title('2D', fontsize=16, fontweight='bold')
 
     # ── Right: 3D = 两个小矩形错开，重叠区 = AAND ──
-    dx, dy = 0.5, 0.5  # misalignment offset
+    dx, dy = 2, 2  # misalignment offset
     # Die A
     ax2.add_patch(mpatches.Rectangle((0, 0), ca, ra, facecolor='#4A90D9',
                   edgecolor='#2B5F8E', linewidth=2, alpha=0.5))
