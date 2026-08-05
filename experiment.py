@@ -49,32 +49,26 @@ def pos_2d(n: int) -> list[tuple[int, int]]:
 
 
 def optimal_3d_dims(n: int) -> tuple[int, int, int]:
-    """Find the most compact box (d1, d2, d3) that can hold n cells.
-    Minimises half surface area d1*d2 + d2*d3 + d1*d3 subject to d1*d2*d3 >= n."""
+    """2-die stack: find optimal a×b rectangle for ceil(n/2) cells per layer,
+    then stack two layers → a×b×2."""
     if n <= 0:
         return (0, 0, 0)
-    best = (1, 1, n)
-    best_hsa = 1 + n + n
-    limit_a = int(round(n ** (1 / 3))) + 2
-    for a in range(1, limit_a):
-        limit_b = int(math.isqrt(n // a)) + 2
-        for b in range(a, limit_b):
-            c = math.ceil(n / (a * b))
-            hsa = a * b + b * c + a * c
-            if hsa < best_hsa:
-                best_hsa = hsa
-                best = (a, b, c)
-    return best
+    per_layer = math.ceil(n / 2)
+    a, b = optimal_2d_dims(per_layer)
+    return (a, b, 2)
 
 
 def pos_3d(n: int) -> list[tuple[int, int, int]]:
-    """Generate (x, y, z) positions for n cells in optimal 3D box layout."""
-    d1, d2, d3 = optimal_3d_dims(n)
+    """2-die stack: first ceil(n/2) cells on die 0, rest on die 1.
+    Each die uses the same optimal 2D grid for its cells."""
+    per_layer = math.ceil(n / 2)
+    _, cols = optimal_2d_dims(per_layer)
     positions = []
     for i in range(n):
-        x = i % d1
-        y = (i // d1) % d2
-        z = i // (d1 * d2)
+        z = 0 if i < per_layer else 1
+        local_i = i if i < per_layer else i - per_layer
+        x = local_i % cols
+        y = local_i // cols
         positions.append((x, y, z))
     return positions
 
@@ -166,11 +160,6 @@ def print_summary(results: list[dict]):
     min_r = min(results, key=lambda x: x["reduction_pct"])
     avg_reduction = sum(r["reduction_pct"] for r in results) / len(results)
 
-    perfect_cubes = [r for r in results
-                     if round(r["N"] ** (1/3)) ** 3 == r["N"]]
-    perfect_squares = [r for r in results
-                       if round(math.isqrt(r["N"])) ** 2 == r["N"]]
-
     print(f"\n{'='*60}")
     print(f"Summary (N = 1..{len(results)})")
     print(f"{'='*60}")
@@ -179,19 +168,6 @@ def print_summary(results: list[dict]):
           f"(2D:{max_r['grid_2d']}  3D:{max_r['box_3d']})")
     print(f"  Min reduction:   N={min_r['N']:>3d}  {min_r['reduction_pct']:>6.1f}%  "
           f"(2D:{min_r['grid_2d']}  3D:{min_r['box_3d']})")
-
-    if perfect_cubes:
-        cubes_str = ", ".join(
-            f"N={r['N']}: {r['reduction_pct']:.1f}%" for r in perfect_cubes
-        )
-        print(f"\n  Perfect cubes:   {cubes_str}")
-
-    if perfect_squares:
-        squares_str = ", ".join(
-            f"N={r['N']}: {r['reduction_pct']:.1f}%" for r in perfect_squares
-        )
-        print(f"  Perfect squares: {squares_str}")
-
     print(f"{'='*60}")
 
 
@@ -228,17 +204,14 @@ def plot_results(results: list[dict], save_path: str | None = None):
     ratio = [r["ratio"] for r in results]
     reduction = [r["reduction_pct"] for r in results]
 
-    # Mark perfect cubes
-    perfect_cubes = [n for n in Ns if round(n ** (1/3)) ** 3 == n]
-
     fig, axes = plt.subplots(2, 2, figsize=(13, 10))
-    fig.suptitle("2D vs 3D Wirelength Comparison (N fully-connected cells)",
+    fig.suptitle("2D vs 3D Wirelength Comparison (N fully-connected cells, 2-die stack)",
                  fontsize=14, fontweight="bold")
 
     # --- Subplot 1: Total wirelength ---
     ax = axes[0, 0]
     ax.plot(Ns, wl2, "b-", linewidth=1.2, alpha=0.8, label="2D grid")
-    ax.plot(Ns, wl3, "r-", linewidth=1.2, alpha=0.8, label="3D box")
+    ax.plot(Ns, wl3, "r-", linewidth=1.2, alpha=0.8, label="3D (2-die)")
     ax.set_xlabel("N (number of cells)")
     ax.set_ylabel("Total Manhattan wirelength")
     ax.set_title("Total Wirelength (complete graph)")
@@ -254,13 +227,6 @@ def plot_results(results: list[dict], save_path: str | None = None):
     ax.set_ylabel("Ratio (3D / 2D)")
     ax.set_title("Wirelength Ratio 3D/2D")
     ax.grid(True, alpha=0.3)
-    # Highlight perfect cubes
-    for cube_n in perfect_cubes:
-        idx = cube_n - 1
-        ax.scatter([cube_n], [ratio[idx]], color="red", s=40, zorder=5)
-        ax.annotate(f"N={cube_n}", (cube_n, ratio[idx]),
-                    textcoords="offset points", xytext=(0, -15), ha="center",
-                    fontsize=8, color="red")
 
     # --- Subplot 3: Reduction % ---
     ax = axes[1, 0]
@@ -270,9 +236,6 @@ def plot_results(results: list[dict], save_path: str | None = None):
     ax.set_ylabel("Reduction (%)")
     ax.set_title("Wirelength Reduction (3D vs 2D)")
     ax.grid(True, alpha=0.3)
-    for cube_n in perfect_cubes:
-        idx = cube_n - 1
-        ax.scatter([cube_n], [reduction[idx]], color="red", s=40, zorder=5)
 
     # --- Subplot 4: Average WL per edge ---
     ax = axes[1, 1]
