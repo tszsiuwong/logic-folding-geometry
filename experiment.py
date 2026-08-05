@@ -278,6 +278,44 @@ def main():
 
     if do_plot:
         plot_results(results, save_path="output/plot.png")
+        plot_hb_density(n_max, save_path="output/plot_hb.png")
+
+
+def plot_hb_density(n_max: int = 100, save_path: str | None = None):
+    """Plot Hybrid Bonding density: cross-die nets and HB/area vs N."""
+    try:
+        import matplotlib.pyplot as plt
+        import matplotlib.ticker as ticker
+    except ImportError:
+        return
+
+    Ns = list(range(1, n_max + 1))
+    nets = []; densities = []
+    for n in Ns:
+        c = math.ceil(n / 2); f = n - c
+        a, b = optimal_2d_dims(c)
+        nets.append(c * f)
+        densities.append((c * f) / (a * b) if a * b > 0 else 0)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    ax1.plot(Ns, nets, "purple", linewidth=1.5)
+    ax1.set_xlabel("N"); ax1.set_ylabel("Cross-die nets")
+    ax1.set_title("Hybrid Bond Count = ceil(N/2) × floor(N/2)")
+    ax1.grid(True, alpha=0.3)
+    ax1.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f"{x:,.0f}"))
+
+    ax2.plot(Ns, densities, "orange", linewidth=1.5)
+    ax2.set_xlabel("N"); ax2.set_ylabel("HB density (nets / unit area)")
+    ax2.set_title("HB Density ≈ N/4")
+    ax2.grid(True, alpha=0.3)
+    fig.tight_layout()
+
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+        print(f"HB plot saved to {save_path}")
+    else:
+        plt.show()
 
 
 if __name__ == "__main__":
