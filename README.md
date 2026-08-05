@@ -208,6 +208,22 @@ $$|\text{Intra}_0| = \frac{C(C-1)}{2},\quad |\text{Intra}_1| = \frac{F(F-1)}{2},
 
 ---
 
+## 实验五：Die 面积利用率
+
+双 Die 堆叠的另一个收益维度——**面积**。设上 Die 面积 $A_T$、下 Die 面积 $A_B$，在 2D 中两 Die 总面积 = $A_T + A_B$；3D 堆叠后 footprint = $\max(A_T, A_B)$。
+
+面积比 = $\frac{\max(A_T, A_B)}{A_T + A_B}$
+
+两 Die 面积越接近 → 比值越小 → 3D 面积收益越大。理想情况 $A_T = A_B$ 时比值 = 0.5（面积节省 50%）；一 Die 碾压另一 Die 时比值 → 1（无收益）。
+
+![Area Utilization](output/plot_area_util.png)
+
+- 左图：任意 $(A_T, A_B)$ 组合的 colormap，对角线上收益最大
+- 右图：实际 N=1..100 的双 Die 面积比曲线，整体接近理想 0.5（因为 2-Die 均分 $N/2$ 后面积天然接近）
+- 黑点标注了我们的实际数据点
+
+---
+
 ## 工程启示
 
 **簇大小上下界**
