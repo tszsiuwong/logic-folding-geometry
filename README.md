@@ -69,14 +69,13 @@ N 个**全互连**的标准单元（完全图 $K_N$，共 $N(N-1)/2$ 条 net）�
 
 N<7 时，层间曼哈顿距离（固定 +1）抵消了平面紧凑性提升，总 HPWL 不变。N≥7 后 3D 开始显现优势。收益整体随 N 增大而上升，但非单调——在完美平方 N 附近（如 9、16、25）会有局部回落，因为 2D 此时排成正方形已达最优。
 
-### 输出图表
+![Total HPWL](output/plot_wl.png)
 
-| 文件 | 内容 |
-|------|------|
-| `output/plot_wl.png` | 总线长对比（蓝=2D，红=3D） |
-| `output/plot_ratio.png` | 3D/2D 比值变化曲线 |
-| `output/plot_reduction.png` | 收益百分比变化曲线 |
-| `output/plot_avg.png` | 单边平均线长对比 |
+![Ratio](output/plot_ratio.png)
+
+![Reduction](output/plot_reduction.png)
+
+![Avg per Edge](output/plot_avg.png)
 
 ---
 
@@ -128,16 +127,4 @@ python experiment.py              # 运行 N=1..100，生成图表
 python experiment.py --no-plot    # 仅文本输出
 python experiment.py --csv        # 同时导出 output/results.csv
 python experiment.py --n=500      # 自定义 N 上限
-```
-
-## 文件结构
-
-```
-logic-folding-geometry/
-├── experiment.py      # 单文件：密铺算法 + 线长计算 + CLI + 可视化
-├── requirements.txt   # matplotlib
-├── output/
-│   ├── plot_*.png     # 独立对比图（wl / ratio / reduction / avg）
-│   └── results.csv    # 原始数据 (N=1..100)
-└── README.md
 ```
