@@ -205,3 +205,24 @@ python experiment.py --no-plot    # 仅文本输出
 python experiment.py --csv        # 同时导出 output/results.csv
 python experiment.py --n=500      # 自定义 N 上限
 ```
+
+---
+
+## 对 TAO 物理设计流程的贡献
+
+本文的定量分析直接支撑 [Agentic TAO Physical Design Flow](https://github.com/hengliao1972/agentic_circuit_optimizer/blob/main/agentic_tao_physical_design_flow.md) 中多个缺失的数值基础：
+
+| TAO 文档需求 | 本文提供的定量结论 |
+|-------------|------------------|
+| **§1.2** "折叠后线长缩短"（定性描述） | 实验一：2-die 平均收益 17.4%，峰值 24.8%，N=7 起正收益 |
+| **§2.3** 路径分割器搜索空间 | 实验一+二：簇大小下界 N≥7（收益门槛），上界 N≤4/p²（HB 密度） |
+| **§2.3** 分割器 cost function——切哪些路径？ | 实验四：d₂≤4 的短线恶化、d₂≥5 的长线受益。分割器应**保护短线集群、对长路径做跨层折叠** |
+| **§2.2 步骤 5** "键合点数量与信号网同量级" | 实验三：跨 Die net 占比 ~50%（完全图），HB 密度 ≈N/4 |
+| **全文缺失** Rent 规则约束 | 简化说明中引入 Rent's Rule（p=1→p∈[0.5,0.7]），为后续实验建立路线图 |
+
+### 可操作的建议
+
+1. **分割器增益函数**：对 d₂≥5 的 net 赋正向激励（跨层折叠），d₂≤4 的 net 赋惩罚（保 Die 内）
+2. **簇粒度剪枝**：仅对 [7, 4/p²] 范围内的候选簇做分层搜索，两端直接跳过
+3. **HB 预算校验**：设工艺 HB 间距 p，则单簇跨 Die net 上限 ≈N²/4，对照密度上限 N/4 做可行性预判
+4. **后续实验**：将完全图 p=1 替换为 Rent 约束 p∈[0.5,0.7]，预期收益更大、HB 压力更小、阈值更宽
