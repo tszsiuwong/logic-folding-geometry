@@ -188,7 +188,7 @@ def export_csv(results: list[dict], path: str = "output/results.csv"):
 # ---------------------------------------------------------------------------
 
 def plot_results(results: list[dict], save_path: str | None = None):
-    """Generate a 2x2 figure: wirelength, ratio, reduction%, and average WL."""
+    """Generate separate figures: wirelength, ratio, reduction%, average WL."""
     try:
         import matplotlib.pyplot as plt
         import matplotlib.ticker as ticker
@@ -204,57 +204,51 @@ def plot_results(results: list[dict], save_path: str | None = None):
     ratio = [r["ratio"] for r in results]
     reduction = [r["reduction_pct"] for r in results]
 
-    fig, axes = plt.subplots(2, 2, figsize=(13, 10))
-    fig.suptitle("2D vs 3D Wirelength Comparison (N fully-connected cells, 2-die stack)",
-                 fontsize=14, fontweight="bold")
-
-    # --- Subplot 1: Total wirelength ---
-    ax = axes[0, 0]
-    ax.plot(Ns, wl2, "b-", linewidth=1.2, alpha=0.8, label="2D grid")
-    ax.plot(Ns, wl3, "r-", linewidth=1.2, alpha=0.8, label="3D (2-die)")
-    ax.set_xlabel("N (number of cells)")
-    ax.set_ylabel("Total Manhattan wirelength")
-    ax.set_title("Total Wirelength (complete graph)")
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f"{x:,.0f}"))
-
-    # --- Subplot 2: Ratio 3D/2D ---
-    ax = axes[0, 1]
-    ax.plot(Ns, ratio, "g-", linewidth=1.5)
-    ax.axhline(y=1.0, color="gray", linestyle="--", linewidth=0.8)
-    ax.set_xlabel("N (number of cells)")
-    ax.set_ylabel("Ratio (3D / 2D)")
-    ax.set_title("Wirelength Ratio 3D/2D")
-    ax.grid(True, alpha=0.3)
-
-    # --- Subplot 3: Reduction % ---
-    ax = axes[1, 0]
-    ax.fill_between(Ns, reduction, alpha=0.3, color="green")
-    ax.plot(Ns, reduction, "g-", linewidth=1.5)
-    ax.set_xlabel("N (number of cells)")
-    ax.set_ylabel("Reduction (%)")
-    ax.set_title("Wirelength Reduction (3D vs 2D)")
-    ax.grid(True, alpha=0.3)
-
-    # --- Subplot 4: Average WL per edge ---
-    ax = axes[1, 1]
-    ax.plot(Ns, avg2, "b-", linewidth=1, alpha=0.8, label="2D avg")
-    ax.plot(Ns, avg3, "r-", linewidth=1, alpha=0.8, label="3D avg")
-    ax.set_xlabel("N (number of cells)")
-    ax.set_ylabel("Average wirelength per edge")
-    ax.set_title("Average Wirelength per Edge")
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-
+    # --- Figure 1: Total wirelength ---
+    fig1, ax1 = plt.subplots(figsize=(8, 5))
+    ax1.plot(Ns, wl2, "b-", linewidth=1.2, alpha=0.8, label="2D grid")
+    ax1.plot(Ns, wl3, "r-", linewidth=1.2, alpha=0.8, label="3D (2-die)")
+    ax1.set_xlabel("N (number of cells)"); ax1.set_ylabel("Total Manhattan wirelength")
+    ax1.set_title("Total Wirelength (complete graph)"); ax1.legend(); ax1.grid(True, alpha=0.3)
+    ax1.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f"{x:,.0f}"))
+    fig1.tight_layout()
     if save_path:
-        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(save_path, dpi=150, bbox_inches="tight")
-        print(f"Plot saved to {save_path}")
-    else:
+        p = Path(save_path); fig1.savefig(p.parent / f"{p.stem}_wl{p.suffix}", dpi=150, bbox_inches="tight")
+
+    # --- Figure 2: Ratio 3D/2D ---
+    fig2, ax2 = plt.subplots(figsize=(8, 5))
+    ax2.plot(Ns, ratio, "g-", linewidth=1.5)
+    ax2.axhline(y=1.0, color="gray", linestyle="--", linewidth=0.8, label="2D baseline")
+    ax2.set_xlabel("N (number of cells)"); ax2.set_ylabel("Ratio (3D / 2D)")
+    ax2.set_title("Wirelength Ratio 3D/2D"); ax2.legend(); ax2.grid(True, alpha=0.3)
+    fig2.tight_layout()
+    if save_path:
+        p = Path(save_path); fig2.savefig(p.parent / f"{p.stem}_ratio{p.suffix}", dpi=150, bbox_inches="tight")
+
+    # --- Figure 3: Reduction % ---
+    fig3, ax3 = plt.subplots(figsize=(8, 5))
+    ax3.fill_between(Ns, reduction, alpha=0.3, color="green")
+    ax3.plot(Ns, reduction, "g-", linewidth=1.5)
+    ax3.set_xlabel("N (number of cells)"); ax3.set_ylabel("Reduction (%)")
+    ax3.set_title("Wirelength Reduction (3D vs 2D)"); ax3.grid(True, alpha=0.3)
+    fig3.tight_layout()
+    if save_path:
+        p = Path(save_path); fig3.savefig(p.parent / f"{p.stem}_reduction{p.suffix}", dpi=150, bbox_inches="tight")
+
+    # --- Figure 4: Average WL per edge ---
+    fig4, ax4 = plt.subplots(figsize=(8, 5))
+    ax4.plot(Ns, avg2, "b-", linewidth=1, alpha=0.8, label="2D avg")
+    ax4.plot(Ns, avg3, "r-", linewidth=1, alpha=0.8, label="3D avg")
+    ax4.set_xlabel("N (number of cells)"); ax4.set_ylabel("Average wirelength per edge")
+    ax4.set_title("Average Wirelength per Edge"); ax4.legend(); ax4.grid(True, alpha=0.3)
+    fig4.tight_layout()
+    if save_path:
+        p = Path(save_path); fig4.savefig(p.parent / f"{p.stem}_avg{p.suffix}", dpi=150, bbox_inches="tight")
+
+    if not save_path:
         plt.show()
+    else:
+        print(f"Plots saved to {Path(save_path).parent}/")
 
 
 # ---------------------------------------------------------------------------
