@@ -280,6 +280,8 @@ def main():
         plot_results(results, save_path="output/plot.png")
         plot_hb_density(n_max, save_path="output/plot_hb.png")
         plot_floorplan_n7(save_path="output/plot_fp_n7.png")
+        plot_net_breakdown(n_max, save_path="output/plot_net_breakdown.png")
+    print_net_breakdown(n_max)
 
 
 def plot_hb_density(n_max: int = 100, save_path: str | None = None):
@@ -391,6 +393,65 @@ def plot_floorplan_n7(save_path: str | None = None):
     else:
         plt.show()
 
+
+def net_breakdown(n: int):
+    """Return (intra_die0, intra_die1, inter_die) net counts for N cells, 2-die stack."""
+    c = math.ceil(n / 2)
+    f = n - c
+    intra0 = c * (c - 1) // 2
+    intra1 = f * (f - 1) // 2
+    inter = c * f
+    total = n * (n - 1) // 2
+    return intra0, intra1, inter, total
+
+
+def print_net_breakdown(n_max: int = 100):
+    """Print net breakdown table for key N values."""
+    print(f"\n{'='*70}")
+    print("Net Breakdown (3D, 2-die stack): Intra-die vs Cross-die")
+    print(f"{'='*70}")
+    print(f"{'N':>4}  {'Die0':>4}  {'Die1':>4}  {'Intra0':>7}  {'Intra1':>7}  {'Cross':>7}  {'Total':>7}  {'Cross%':>7}")
+    print("-" * 70)
+    for n in [4, 7, 8, 16, 27, 50, 64, 100]:
+        i0, i1, inter, total = net_breakdown(n)
+        cross_pct = inter / total * 100 if total > 0 else 0
+        print(f"{n:>4}  {math.ceil(n/2):>4}  {n - math.ceil(n/2):>4}  {i0:>7}  {i1:>7}  {inter:>7}  {total:>7}  {cross_pct:>6.1f}%")
+    print(f"{'='*70}")
+
+
+def plot_net_breakdown(n_max: int = 100, save_path: str | None = None):
+    """Plot intra-die vs cross-die net proportions for 3D."""
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return
+
+    Ns = list(range(1, n_max + 1))
+    intra = []; inter_ = []; cross_pct = []
+    for n in Ns:
+        i0, i1, inter, total = net_breakdown(n)
+        intra.append(i0 + i1)
+        inter_.append(inter)
+        cross_pct.append(inter / total * 100 if total > 0 else 0)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    ax1.stackplot(Ns, intra, inter_, labels=["Intra-die", "Cross-die"],
+                  colors=["#4A90D9", "#E85D47"], alpha=0.8)
+    ax1.set_xlabel("N"); ax1.set_ylabel("Net count")
+    ax1.set_title("3D Net Count: Intra-die vs Cross-die"); ax1.legend()
+    ax1.grid(True, alpha=0.3)
+
+    ax2.plot(Ns, cross_pct, "r-", linewidth=1.5)
+    ax2.set_xlabel("N"); ax2.set_ylabel("Cross-die (%)")
+    ax2.set_title("Cross-die Net Proportion (%)"); ax2.grid(True, alpha=0.3)
+    fig.tight_layout()
+
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+        print(f"Net breakdown plot saved to {save_path}")
+    else:
+        plt.show()
 
 if __name__ == "__main__":
     main()
