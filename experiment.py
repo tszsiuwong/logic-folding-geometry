@@ -283,6 +283,7 @@ def main():
         plot_net_breakdown(n_max, save_path="output/plot_net_breakdown.png")
         plot_wl_by_length(n_max, save_path="output/plot_wl_by_length.png")
         plot_area_utilization(n_max, save_path="output/plot_area_util.png")
+        plot_aand_aor_diagram(save_path="output/plot_aand_aor.png")
     print_net_breakdown(n_max)
     print_wl_by_length(n_max)
 
@@ -599,6 +600,79 @@ def plot_area_utilization(n_max: int = 100, save_path: str | None = None):
         Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
         print(f"Area utilization plot saved to {save_path}")
+    else:
+        plt.show()
+
+
+def plot_aand_aor_diagram(save_path: str | None = None):
+    """Schematic: illustrate AAND (overlap) and AOR (union) for two misaligned dies."""
+    try:
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as mpatches
+    except ImportError:
+        return
+
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+    ra, ca = 3, 4; rb, cb = 2, 3
+
+    # ── Left: Two dies separately ──
+    ax = axes[0]
+    ax.add_patch(mpatches.Rectangle((0, 0), ca, ra, facecolor='#4A90D9', edgecolor='#2B5F8E',
+                  linewidth=2, alpha=0.7))
+    ax.add_patch(mpatches.Rectangle((5.5, 0.5), cb, rb, facecolor='#E85D47', edgecolor='#B83A2E',
+                  linewidth=2, alpha=0.7))
+    ax.text(ca/2, ra/2, f'Die A\n{ra}x{ca}', ha='center', va='center', fontsize=12,
+            fontweight='bold', color='white')
+    ax.text(5.5+cb/2, 0.5+rb/2, f'Die B\n{rb}x{cb}', ha='center', va='center', fontsize=12,
+            fontweight='bold', color='white')
+    ax.set_xlim(-0.5, 10); ax.set_ylim(-0.5, 5)
+    ax.set_aspect('equal'); ax.axis('off')
+    ax.set_title('2D: Two separate dies\nAT + AB', fontsize=13, fontweight='bold')
+
+    # ── Middle: Stacked ──
+    ax = axes[1]
+    ax.add_patch(mpatches.Rectangle((0, 0), ca, ra, facecolor='#4A90D9', edgecolor='#2B5F8E',
+                  linewidth=2, alpha=0.4))
+    ax.add_patch(mpatches.Rectangle((0, 0), cb, rb, facecolor='#E85D47', edgecolor='#B83A2E',
+                  linewidth=2, alpha=0.4))
+    # AAND
+    aoverlap = min(ra, rb) * min(ca, cb)
+    ax.add_patch(mpatches.Rectangle((0, 0), min(ca, cb), min(ra, rb),
+                  facecolor='#7B2D8B', edgecolor='#5A1D6A', linewidth=2, alpha=0.6, hatch='///'))
+    ax.text(min(ca,cb)/2, min(ra,rb)/2, 'AAND', ha='center', va='center',
+            fontsize=12, fontweight='bold', color='white')
+    ax.text(ca/2, ra-0.3, 'Die A', ha='center', fontsize=9, color='#2B5F8E', fontweight='bold')
+    ax.text(cb+0.5, rb/2, 'Die B', ha='left', va='center', fontsize=9, color='#B83A2E', fontweight='bold')
+    ax.set_xlim(-0.5, 5.5); ax.set_ylim(-0.5, 4.5)
+    ax.set_aspect('equal'); ax.axis('off')
+    ax.set_title('3D Stacked\nAAND = overlap', fontsize=13, fontweight='bold')
+
+    # ── Right: Formula ──
+    ax = axes[2]
+    at = ra * ca; ab = rb * cb
+    aor = at + ab - aoverlap
+    ratio_val = aor / (at + ab)
+    text = (
+        f"AT = {ra}x{ca} = {at}\n"
+        f"AB = {rb}x{cb} = {ab}\n"
+        f"AAND = min(ra,rb) x min(ca,cb) = {aoverlap}\n\n"
+        f"AOR = AT + AB - AAND\n"
+        f"     = {at} + {ab} - {aoverlap} = {aor}\n\n"
+        f"3D/2D = AOR / (AT+AB)\n"
+        f"       = {aor}/{at+ab} = {ratio_val:.3f}\n\n"
+        f"Area saved = {1-ratio_val:.0%}"
+    )
+    ax.text(0.05, 0.95, text, ha='left', va='top', fontsize=12, family='monospace',
+            transform=ax.transAxes)
+    ax.axis('off')
+    ax.set_title('Formula', fontsize=13, fontweight='bold')
+
+    plt.tight_layout()
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+        print(f"AAND/AOR diagram saved to {save_path}")
     else:
         plt.show()
 

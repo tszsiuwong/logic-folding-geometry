@@ -226,6 +226,8 @@ $$|\text{Intra}_0| = \frac{C(C-1)}{2},\quad |\text{Intra}_1| = \frac{F(F-1)}{2},
 - 右图：实际 N=1..100 数据点，整体贴近理想线
 - 黑点标注了我们的实际数据
 
+![AAND/AOR Diagram](output/plot_aand_aor.png)
+
 ---
 
 ## 工程启示
