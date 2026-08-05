@@ -49,19 +49,17 @@ python experiment.py --n=500      # 自定义 N 上限
 ## 输出
 
 - 控制台：格式化表格 + 汇总统计
-- `output/plot.png`：四合一线长对比图
-- `output/results.csv`：全量原始数据
-- `output/thought_experiment.ipynb`：Jupyter Notebook（逐步拆解 + 交互滑块）
+- `output/plot_*.png`：独立对比图（总线长、比值、收益、单边平均）
+- `output/results.csv`：全量原始数据（N=1..100）
 
 ## 文件结构
 
 ```
 logic-folding-geometry/
-├── experiment.py               # 单文件：密铺算法 + 线长计算 + CLI + 可视化
-├── requirements.txt            # matplotlib
+├── experiment.py      # 单文件：密铺算法 + 线长计算 + CLI + 可视化
+├── requirements.txt   # matplotlib
 ├── output/
-│   ├── plot.png                # 生成的对比图
-│   ├── results.csv             # 原始数据
-│   └── thought_experiment.ipynb # 交互式 Notebook
+│   ├── plot_*.png     # 生成的对比图
+│   └── results.csv    # 原始数据
 └── README.md
 ```
