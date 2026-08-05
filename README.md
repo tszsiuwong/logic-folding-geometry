@@ -1,2 +1,59 @@
 # logic-folding-geometry
-Geometric study of 2D-to-3D wirelength reduction for logic folding
+
+几何思想实验：量化 2D 逻辑布局折叠为 3D 后的线长收益。
+
+## 核心思路
+
+N 个全互连的细胞（完全图 K_N），按最优空间密铺排列。比较 2D 网格 vs 3D 立方体排布下，总的曼哈顿线长变化。
+
+- **2D**：细胞挤在尽可能"方"的矩形里 → 平均跳距 O(√N)
+- **3D**：细胞挤在尽可能"立方"的盒子里 → 平均跳距 O(∛N)
+- 完全图有 N(N−1)/2 条边，理论比值 3D/2D ~ O(N^(−1/6)) → N 越大，3D 优势越显著
+
+## 快速开始
+
+```bash
+pip install -r requirements.txt
+python experiment.py
+```
+
+## 用法
+
+```
+python experiment.py              # 运行 N=1..100，弹出交互式图表
+python experiment.py --no-plot    # 仅文本输出
+python experiment.py --csv        # 同时导出 output/results.csv
+python experiment.py --n=500      # 自定义 N 上限
+```
+
+## 核心发现（N = 1..100）
+
+| N | 2D 网格 | 3D 盒子 | 比值 (3D/2D) | 收益 |
+|---|---------|---------|-------------|------|
+| 7 | 2×4 | 2×2×2 | 0.900 | 10.0% |
+| 8 | 2×4 | 2×2×2 | 0.857 | 14.3% |
+| 27 | 4×7 | 3×3×3 | 0.771 | 22.9% |
+| 64 | 8×8 | 4×4×4 | 0.714 | 28.6% |
+| 100 | 10×10 | 4×5×5 | 0.674 | **32.6%** |
+
+- **1..100 平均收益：22.4%**
+- **峰值收益：34.1%（N=91）**
+- 完美立方数（8, 27, 64）处出现跳变——3D 恰好拼成立方体，2D 被迫拉长
+- 完美平方数（4, 9, 16...）会暂时抹平 3D 优势——2D 自身已是最优正方形
+- N < 7：细胞太少，第三维无用武之地，甚至可能更差（N=5 时 −25%）
+
+## 输出
+
+- 控制台：格式化表格 + 汇总统计
+- `output/plot.png`：四合一图（总线长、比值、收益百分比、平均单边线长）
+- `output/results.csv`：全量原始数据
+
+## 文件结构
+
+```
+logic-folding-geometry/
+├── experiment.py      # 单文件：密铺算法 + 线长计算 + CLI + 可视化
+├── requirements.txt   # matplotlib
+├── output/            # 生成的图表和 CSV
+└── README.md
+```
