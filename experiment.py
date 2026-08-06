@@ -113,15 +113,6 @@ def generate_edges_by_radius(p2: list, n: int, radius: int | None) -> list:
     return edges
 
 
-def rent_radius(n: int, p: float) -> int:
-    """Rent-constrained connectivity radius: R = round(N^(p/2))."""
-    if p >= 1.0:
-        return None  # complete graph
-    if n <= 1:
-        return 0
-    return max(1, round(n ** (p / 2)))
-
-
 def avg_wirelength(total_wl: int, n: int) -> float:
     """Average wirelength per edge."""
     num_edges = n * (n - 1) / 2
@@ -303,10 +294,8 @@ def main():
         plot_wl_by_length(n_max, save_path="output/plot_wl_by_length.png")
         plot_area_utilization(n_max, save_path="output/plot_area_util.png")
         plot_aand_aor_diagram(save_path="output/plot_aand_aor.png")
-        plot_radius_comparison(n_max, save_path="output/plot_radius.png")
     print_net_breakdown(n_max)
     print_wl_by_length(n_max)
-    print_radius_comparison(n_max)
 
 
 def plot_hb_density(n_max: int = 100, save_path: str | None = None):
@@ -676,124 +665,6 @@ def plot_aand_aor_diagram(save_path: str | None = None):
         Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
         print(f"AAND/AOR diagram saved to {save_path}")
-    else:
-        plt.show()
-
-
-def print_radius_comparison(n_max: int = 100):
-    pvals = [0.5, 0.6, 0.7, 1.0]
-    tail_frac = 0.10
-    print(f"\n{'='*80}")
-    print(f"Experiment 6: Rent + Long-tail (N=1..{n_max}, tail={tail_frac:.0%})")
-    print(f"  Model: {1-tail_frac:.0%} edges within R=N^(p/2), {tail_frac:.0%} unrestricted")
-    print(f"{'='*80}")
-    print(f"{'Rent p':>8}  {'# edges':>10}  {'WL_2D':>10}  {'WL_3D':>10}  {'ratio':>7}  {'reduct%':>7}  {'cross%':>7}")
-    print("-" * 80)
-    for p in pvals:
-        t2, t3, te3, tc = 0, 0, 0, 0
-        for n in range(1, n_max + 1):
-            p2 = pos_2d(n); p3 = pos_3d(n)
-            edges2 = generate_edges_longtail(p2, n, p, tail_frac)
-            edges3 = generate_edges_longtail_3d(p3, n, p, tail_frac)
-            ec3 = len(edges3) if edges3 else n * (n - 1) // 2
-            w2 = total_wirelength(p2, manhattan_2d, n, edges2)
-            w3 = total_wirelength(p3, manhattan_3d, n, edges3)
-            t2 += w2; t3 += w3; te3 += ec3
-            if edges3:
-                tc += sum(1 for i, j in edges3 if p3[i][2] != p3[j][2])
-            else:
-                c = math.ceil(n / 2); f = n - c; tc += c * f
-        r = t3 / t2 if t2 else 1
-        cp = tc / te3 * 100 if te3 else 0
-        print(f"{p:>8.1f}  {te3:>10}  {t2:>10}  {t3:>10}  {r:>7.4f}  {(1-r)*100:>6.1f}%  {cp:>6.1f}%")
-    print(f"{'='*80}")
-
-
-def generate_edges_by_radius_3d(p3: list, n: int, radius: int | None) -> list:
-    if radius is None:
-        return None
-    edges = []
-    for i in range(n):
-        pi = p3[i]
-        for j in range(i + 1, n):
-            if manhattan_3d(pi, p3[j]) <= radius:
-                edges.append((i, j))
-    return edges
-
-
-def generate_edges_longtail(p2, n, p, tail_frac=0.10):
-    import random as _r
-    R = rent_radius(n, p)
-    local = generate_edges_by_radius(p2, n, R)
-    if tail_frac <= 0 or R is None:
-        return local
-    n_local = len(local) if local else 0
-    n_tail = round(n_local / (1 - tail_frac) * tail_frac) if n_local > 0 else 1
-    local_set = set(local) if local else set()
-    candidates = [(i, j) for i in range(n) for j in range(i+1, n) if (i, j) not in local_set]
-    if candidates and n_tail > 0:
-        chosen = _r.sample(candidates, min(n_tail, len(candidates)))
-        return list(local_set) + chosen
-    return list(local_set)
-
-
-def generate_edges_longtail_3d(p3, n, p, tail_frac=0.10):
-    import random as _r
-    R = rent_radius(n, p)
-    local = generate_edges_by_radius_3d(p3, n, R)
-    if tail_frac <= 0 or R is None:
-        return local
-    n_local = len(local) if local else 0
-    n_tail = round(n_local / (1 - tail_frac) * tail_frac) if n_local > 0 else 1
-    local_set = set(local) if local else set()
-    candidates = [(i, j) for i in range(n) for j in range(i+1, n) if (i, j) not in local_set]
-    if candidates and n_tail > 0:
-        chosen = _r.sample(candidates, min(n_tail, len(candidates)))
-        return list(local_set) + chosen
-    return list(local_set)
-
-
-def plot_radius_comparison(n_max: int = 100, save_path: str | None = None):
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError:
-        return
-    tail_frac = 0.10
-    pvals = [0.5, 0.6, 0.7, 1.0]
-    labels = ["p=0.5 (SRAM)", "p=0.6 (GPU)", "p=0.7 (CPU)", "p=1.0 (complete)"]
-    reds = {p: [] for p in pvals}
-    cross = {p: [] for p in pvals}
-    Ns = list(range(1, n_max + 1))
-    for p in pvals:
-        for n in Ns:
-            p2 = pos_2d(n); p3 = pos_3d(n)
-            edges2 = generate_edges_longtail(p2, n, p, tail_frac)
-            edges3 = generate_edges_longtail_3d(p3, n, p, tail_frac)
-            ec2 = len(edges2) if edges2 else n * (n - 1) // 2
-            ec3 = len(edges3) if edges3 else n * (n - 1) // 2
-            w2 = total_wirelength(p2, manhattan_2d, n, edges2)
-            w3 = total_wirelength(p3, manhattan_3d, n, edges3)
-            reds[p].append((1 - w3/w2) * 100 if w2 else 0)
-            if edges3:
-                cc = sum(1 for i, j in edges3 if p3[i][2] != p3[j][2])
-            else:
-                c = math.ceil(n / 2); f = n - c; cc = c * f
-            cross[p].append(cc / ec3 * 100 if ec3 else 0)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    colors = ["#4A90D9", "#E8A040", "#E85D47", "#333333"]
-    for p, lb, co in zip(pvals, labels, colors):
-        lw = 2.5 if p == 1.0 else 1.2
-        ax1.plot(Ns, reds[p], color=co, lw=lw, alpha=0.9, label=lb)
-        ax2.plot(Ns, cross[p], color=co, lw=lw, alpha=0.9, label=lb)
-    ax1.set_xlabel("N"); ax1.set_ylabel("Reduction (%)")
-    ax1.set_title("WL Reduction vs Rent p"); ax1.legend(); ax1.grid(True, alpha=0.3)
-    ax2.set_xlabel("N"); ax2.set_ylabel("Cross-die Net (%)")
-    ax2.set_title("Cross-die Proportion vs Rent p"); ax2.legend(); ax2.grid(True, alpha=0.3)
-    fig.tight_layout()
-    if save_path:
-        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(save_path, dpi=150, bbox_inches="tight")
-        print(f"Radius comparison plot saved to {save_path}")
     else:
         plt.show()
 
