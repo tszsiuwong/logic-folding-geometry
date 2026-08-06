@@ -29,7 +29,7 @@
 
 还没碰的坑：实际 pin 位置带来的 HPWL 包围盒误差、绕线拥塞下的兜路惩罚、TSV/HB 寄生远大于平面金属、不同驱动强度单元的面积差异、热和 IR 在堆叠后的恶化、跨 Die 时钟 skew、真实 netlist 的 Rent 约束。
 
-**先圈边界，再填数字。** Rent 约束排第一，因为它会同时修正所有实验的定量结论。
+**先圈边界，再填数字。** 路线：几何推导（本文）→ TaiWei-Pin-3D 验证 → 商业工具 TNS/WNS 收敛。
 
 ---
 
@@ -307,4 +307,10 @@ python experiment.py --n=500      # 自定义 N 上限
 
 ## 下一步
 
-用本文的几何体系验证 [TaiWei-Pin-3D](https://github.com/CODA-Team/TaiWei-Pin-3D) —— 一个面向 F2F 双 Die 的真实物理设计流程。TaiWei 使用 Pin3D 方法论做 tier-by-tier 优化、mixed-fanout split、分阶段 CTS，但缺少几何先验。本文的 HB 密度模型、长短线非对称性、夹逼阈值可以直接嵌入其 split-net 代价函数和簇粒度决策。
+| 阶段 | 目标 | 手段 |
+|------|------|------|
+| **当前** | 几何上界测试 | 完全图 p=1，曼哈顿距离，本文五个实验 |
+| **验证** | 几何推导在真实流程中是否成立 | [TaiWei-Pin-3D](https://github.com/CODA-Team/TaiWei-Pin-3D)——F2F 双 Die 物理设计流程，用它的 split-net、tier-by-tier 布局、HBT 资源来校验本文的夹逼阈值、长短线非对称、HB 密度模型 |
+| **落地** | 走到商业工具签核级 | Innovus/FC + 真实 PDK，最终以 TNS/WNS/setup/hold 收敛来判定——这是物理设计工程师的终点线 |
+
+层层递进：几何给直觉、TaiWei 做中间验证、商业工具做最终判据。如果三层都对得上，这些推导就不只是思想实验了。
