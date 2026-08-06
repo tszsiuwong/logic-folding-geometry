@@ -684,27 +684,44 @@ def print_radius_comparison(n_max: int = 100):
     pvals = [0.5, 0.6, 0.7, 1.0]
     print(f"\n{'='*80}")
     print(f"Experiment 6: Rent-constrained Graphs (N=1..{n_max})")
+    print(f"  Note: 2D and 3D use RENT-CONSTRAINED edges derived from")
+    print(f"  their OWN coordinates (R = N^(p/2) for that space).")
     print(f"{'='*80}")
     print(f"{'Rent p':>8}  {'# edges':>10}  {'WL_2D':>10}  {'WL_3D':>10}  {'ratio':>7}  {'reduct%':>7}  {'cross%':>7}")
     print("-" * 80)
     for p in pvals:
-        t2, t3, te, tc = 0, 0, 0, 0
+        t2, t3, te2, te3, tc = 0, 0, 0, 0, 0
         for n in range(1, n_max + 1):
             p2 = pos_2d(n); p3 = pos_3d(n)
-            R = rent_radius(n, p)
-            edges = generate_edges_by_radius(p2, n, R)
-            ec = len(edges) if edges else n * (n - 1) // 2
-            w2 = total_wirelength(p2, manhattan_2d, n, edges)
-            w3 = total_wirelength(p3, manhattan_3d, n, edges)
-            t2 += w2; t3 += w3; te += ec
-            if edges:
-                tc += sum(1 for i, j in edges if p3[i][2] != p3[j][2])
+            R2 = rent_radius(n, p)
+            R3 = rent_radius(n, p)
+            edges2 = generate_edges_by_radius(p2, n, R2)  # 2D graph from 2D coords
+            edges3 = generate_edges_by_radius_3d(p3, n, R3)  # 3D graph from 3D coords
+            ec2 = len(edges2) if edges2 else n * (n - 1) // 2
+            ec3 = len(edges3) if edges3 else n * (n - 1) // 2
+            w2 = total_wirelength(p2, manhattan_2d, n, edges2)
+            w3 = total_wirelength(p3, manhattan_3d, n, edges3)
+            t2 += w2; t3 += w3; te2 += ec2; te3 += ec3
+            if edges3:
+                tc += sum(1 for i, j in edges3 if p3[i][2] != p3[j][2])
             else:
                 c = math.ceil(n / 2); f = n - c; tc += c * f
         r = t3 / t2 if t2 else 1
-        cp = tc / te * 100 if te else 0
-        print(f"{p:>8.1f}  {te:>10}  {t2:>10}  {t3:>10}  {r:>7.4f}  {(1-r)*100:>6.1f}%  {cp:>6.1f}%")
+        cp = tc / te3 * 100 if te3 else 0
+        print(f"{p:>8.1f}  {te2:>10}  {t2:>10}  {t3:>10}  {r:>7.4f}  {(1-r)*100:>6.1f}%  {cp:>6.1f}%")
     print(f"{'='*80}")
+
+
+def generate_edges_by_radius_3d(p3: list, n: int, radius: int | None) -> list:
+    if radius is None:
+        return None
+    edges = []
+    for i in range(n):
+        pi = p3[i]
+        for j in range(i + 1, n):
+            if manhattan_3d(pi, p3[j]) <= radius:
+                edges.append((i, j))
+    return edges
 
 
 def plot_radius_comparison(n_max: int = 100, save_path: str | None = None):
@@ -721,16 +738,18 @@ def plot_radius_comparison(n_max: int = 100, save_path: str | None = None):
         for n in Ns:
             p2 = pos_2d(n); p3 = pos_3d(n)
             R = rent_radius(n, p)
-            edges = generate_edges_by_radius(p2, n, R)
-            ec = len(edges) if edges else n * (n - 1) // 2
-            w2 = total_wirelength(p2, manhattan_2d, n, edges)
-            w3 = total_wirelength(p3, manhattan_3d, n, edges)
+            edges2 = generate_edges_by_radius(p2, n, R)
+            edges3 = generate_edges_by_radius_3d(p3, n, R)
+            ec2 = len(edges2) if edges2 else n * (n - 1) // 2
+            ec3 = len(edges3) if edges3 else n * (n - 1) // 2
+            w2 = total_wirelength(p2, manhattan_2d, n, edges2)
+            w3 = total_wirelength(p3, manhattan_3d, n, edges3)
             reds[p].append((1 - w3/w2) * 100 if w2 else 0)
-            if edges:
-                cc = sum(1 for i, j in edges if p3[i][2] != p3[j][2])
+            if edges3:
+                cc = sum(1 for i, j in edges3 if p3[i][2] != p3[j][2])
             else:
                 c = math.ceil(n / 2); f = n - c; cc = c * f
-            cross[p].append(cc / ec * 100 if ec else 0)
+            cross[p].append(cc / ec3 * 100 if ec3 else 0)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
     colors = ["#4A90D9", "#E8A040", "#E85D47", "#333333"]
     for p, lb, co in zip(pvals, labels, colors):
