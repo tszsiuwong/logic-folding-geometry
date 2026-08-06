@@ -302,3 +302,9 @@ python experiment.py --n=500      # 自定义 N 上限
 2. **簇粒度剪枝**：仅对 [7, 4/p²] 范围内的候选簇做分层搜索，两端直接跳过
 3. **HB 预算校验**：设工艺 HB 间距 p，则单簇跨 Die net 上限 ≈N²/4，对照密度上限 N/4 做可行性预判
 4. **后续实验**：将完全图 p=1 替换为 Rent 约束 p∈[0.5,0.7]，预期收益更大、HB 压力更小、阈值更宽
+
+---
+
+## 下一步
+
+用本文的几何体系验证 [TaiWei-Pin-3D](https://github.com/CODA-Team/TaiWei-Pin-3D) —— 一个面向 F2F 双 Die 的真实物理设计流程。TaiWei 使用 Pin3D 方法论做 tier-by-tier 优化、mixed-fanout split、分阶段 CTS，但缺少几何先验。本文的 HB 密度模型、长短线非对称性、夹逼阈值可以直接嵌入其 split-net 代价函数和簇粒度决策。
