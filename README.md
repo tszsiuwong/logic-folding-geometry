@@ -8,12 +8,19 @@
 
 ### 本文是什么
 
-以物理设计工程师 + EDA 视角，**回归第一性原理**（几何、面积、连接密度），围绕架构师关心的 3D 堆叠问题提供一些思考思路：
+在 AI-native EDA 的技术栈里，本文是 **Strategy Agent 的 physics prior**——不是预测芯片性能的精确模型，而是告诉 Agent 一个设计值不值得做 3D fold、应该往哪个方向切。
 
-- 双 Die 堆叠能省多少线长？从多少个单元开始值得做？
-- Hybrid Bond 密度跟得住吗？簇多大的时候会爆？
-- 长线和短线谁更享受 3D 收益？分割器该优先切什么？
-- 两个 Die 面积不对齐、长宽比不同，会亏多少面积？
+```text
+Step 1: 证明 3D folding 有理论收益    ← 本文 (logic-folding-geometry)
+   ↓
+Step 2: 关键问题变成 "怎么 fold"       → agentic_3d_partition
+   ↓
+Step 3: 整个 PD flow 都应该 agent 化    → agentic_tao_physical_design_flow
+   ↓
+Step 4: 形成 autonomous circuit optimizer
+```
+
+没有这层物理直觉，Agent 只能盲搜；有了它，Agent 知道什么设计值得 fold、优先切哪些 net、什么簇大小是可行的。
 
 **本文的语言**是曼哈顿距离 → 密度 → AAND/AOR → Rent's Rule → 夹逼阈值。
 
