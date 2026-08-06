@@ -113,6 +113,15 @@ def generate_edges_by_radius(p2: list, n: int, radius: int | None) -> list:
     return edges
 
 
+def rent_radius(n: int, p: float) -> int:
+    """Rent-constrained connectivity radius: R = round(N^(p/2))."""
+    if p >= 1.0:
+        return None  # complete graph
+    if n <= 1:
+        return 0
+    return max(1, round(n ** (p / 2)))
+
+
 def avg_wirelength(total_wl: int, n: int) -> float:
     """Average wirelength per edge."""
     num_edges = n * (n - 1) / 2
@@ -672,16 +681,17 @@ def plot_aand_aor_diagram(save_path: str | None = None):
 
 
 def print_radius_comparison(n_max: int = 100):
-    radii = [2, 3, 5, None]
+    pvals = [0.5, 0.6, 0.7, 1.0]
     print(f"\n{'='*80}")
-    print(f"Experiment 6: Connectivity Radius (N=1..{n_max})")
+    print(f"Experiment 6: Rent-constrained Graphs (N=1..{n_max})")
     print(f"{'='*80}")
-    print(f"{'Radius':>8}  {'# edges':>10}  {'WL_2D':>10}  {'WL_3D':>10}  {'ratio':>7}  {'reduct%':>7}  {'cross%':>7}")
+    print(f"{'Rent p':>8}  {'# edges':>10}  {'WL_2D':>10}  {'WL_3D':>10}  {'ratio':>7}  {'reduct%':>7}  {'cross%':>7}")
     print("-" * 80)
-    for R in radii:
+    for p in pvals:
         t2, t3, te, tc = 0, 0, 0, 0
         for n in range(1, n_max + 1):
             p2 = pos_2d(n); p3 = pos_3d(n)
+            R = rent_radius(n, p)
             edges = generate_edges_by_radius(p2, n, R)
             ec = len(edges) if edges else n * (n - 1) // 2
             w2 = total_wirelength(p2, manhattan_2d, n, edges)
@@ -693,8 +703,7 @@ def print_radius_comparison(n_max: int = 100):
                 c = math.ceil(n / 2); f = n - c; tc += c * f
         r = t3 / t2 if t2 else 1
         cp = tc / te * 100 if te else 0
-        rs = "inf" if R is None else str(R)
-        print(f"{rs:>8}  {te:>10}  {t2:>10}  {t3:>10}  {r:>7.4f}  {(1-r)*100:>6.1f}%  {cp:>6.1f}%")
+        print(f"{p:>8.1f}  {te:>10}  {t2:>10}  {t3:>10}  {r:>7.4f}  {(1-r)*100:>6.1f}%  {cp:>6.1f}%")
     print(f"{'='*80}")
 
 
@@ -703,34 +712,35 @@ def plot_radius_comparison(n_max: int = 100, save_path: str | None = None):
         import matplotlib.pyplot as plt
     except ImportError:
         return
-    radii = [2, 3, 5, None]
-    labels = ["R=2", "R=3", "R=5", "R=inf"]
-    reds = {r: [] for r in radii}
-    cross = {r: [] for r in radii}
+    pvals = [0.5, 0.6, 0.7, 1.0]
+    labels = ["p=0.5 (SRAM)", "p=0.6 (GPU)", "p=0.7 (CPU)", "p=1.0 (complete)"]
+    reds = {p: [] for p in pvals}
+    cross = {p: [] for p in pvals}
     Ns = list(range(1, n_max + 1))
-    for R in radii:
+    for p in pvals:
         for n in Ns:
             p2 = pos_2d(n); p3 = pos_3d(n)
+            R = rent_radius(n, p)
             edges = generate_edges_by_radius(p2, n, R)
             ec = len(edges) if edges else n * (n - 1) // 2
             w2 = total_wirelength(p2, manhattan_2d, n, edges)
             w3 = total_wirelength(p3, manhattan_3d, n, edges)
-            reds[R].append((1 - w3/w2) * 100 if w2 else 0)
+            reds[p].append((1 - w3/w2) * 100 if w2 else 0)
             if edges:
                 cc = sum(1 for i, j in edges if p3[i][2] != p3[j][2])
             else:
                 c = math.ceil(n / 2); f = n - c; cc = c * f
-            cross[R].append(cc / ec * 100 if ec else 0)
+            cross[p].append(cc / ec * 100 if ec else 0)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
     colors = ["#4A90D9", "#E8A040", "#E85D47", "#333333"]
-    for R, lb, co in zip(radii, labels, colors):
-        lw = 2.5 if R is None else 1.2
-        ax1.plot(Ns, reds[R], color=co, lw=lw, alpha=0.9, label=lb)
-        ax2.plot(Ns, cross[R], color=co, lw=lw, alpha=0.9, label=lb)
+    for p, lb, co in zip(pvals, labels, colors):
+        lw = 2.5 if p == 1.0 else 1.2
+        ax1.plot(Ns, reds[p], color=co, lw=lw, alpha=0.9, label=lb)
+        ax2.plot(Ns, cross[p], color=co, lw=lw, alpha=0.9, label=lb)
     ax1.set_xlabel("N"); ax1.set_ylabel("Reduction (%)")
-    ax1.set_title("WL Reduction vs Connectivity Radius"); ax1.legend(); ax1.grid(True, alpha=0.3)
+    ax1.set_title("WL Reduction vs Rent p"); ax1.legend(); ax1.grid(True, alpha=0.3)
     ax2.set_xlabel("N"); ax2.set_ylabel("Cross-die Net (%)")
-    ax2.set_title("Cross-die Proportion vs Connectivity Radius"); ax2.legend(); ax2.grid(True, alpha=0.3)
+    ax2.set_title("Cross-die Proportion vs Rent p"); ax2.legend(); ax2.grid(True, alpha=0.3)
     fig.tight_layout()
     if save_path:
         Path(save_path).parent.mkdir(parents=True, exist_ok=True)
