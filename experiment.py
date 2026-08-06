@@ -85,14 +85,32 @@ def manhattan_3d(a: tuple[int, int, int], b: tuple[int, int, int]) -> int:
     return abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2])
 
 
-def total_wirelength(positions: list, dist_fn, n: int) -> int:
-    """Sum of Manhattan distances over all N*(N-1)/2 pairs (complete graph)."""
+def total_wirelength(positions: list, dist_fn, n: int, edges: list | None = None) -> int:
+    """Sum of Manhattan distances over given edge list (complete graph if edges=None)."""
     total = 0
-    for i in range(n):
-        pi = positions[i]
-        for j in range(i + 1, n):
-            total += dist_fn(pi, positions[j])
+    if edges is None:
+        for i in range(n):
+            pi = positions[i]
+            for j in range(i + 1, n):
+                total += dist_fn(pi, positions[j])
+    else:
+        for i, j in edges:
+            total += dist_fn(positions[i], positions[j])
     return total
+
+
+def generate_edges_by_radius(p2: list, n: int, radius: int | None) -> list:
+    """Return list of (i,j) pairs where Manhattan distance in 2D <= radius.
+    If radius is None, return None (complete graph)."""
+    if radius is None:
+        return None
+    edges = []
+    for i in range(n):
+        pi = p2[i]
+        for j in range(i + 1, n):
+            if manhattan_2d(pi, p2[j]) <= radius:
+                edges.append((i, j))
+    return edges
 
 
 def avg_wirelength(total_wl: int, n: int) -> float:
@@ -276,8 +294,10 @@ def main():
         plot_wl_by_length(n_max, save_path="output/plot_wl_by_length.png")
         plot_area_utilization(n_max, save_path="output/plot_area_util.png")
         plot_aand_aor_diagram(save_path="output/plot_aand_aor.png")
+        plot_radius_comparison(n_max, save_path="output/plot_radius.png")
     print_net_breakdown(n_max)
     print_wl_by_length(n_max)
+    print_radius_comparison(n_max)
 
 
 def plot_hb_density(n_max: int = 100, save_path: str | None = None):
@@ -647,6 +667,75 @@ def plot_aand_aor_diagram(save_path: str | None = None):
         Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
         print(f"AAND/AOR diagram saved to {save_path}")
+    else:
+        plt.show()
+
+
+def print_radius_comparison(n_max: int = 100):
+    radii = [2, 3, 5, None]
+    print(f"\n{'='*80}")
+    print(f"Experiment 6: Connectivity Radius (N=1..{n_max})")
+    print(f"{'='*80}")
+    print(f"{'Radius':>8}  {'# edges':>10}  {'WL_2D':>10}  {'WL_3D':>10}  {'ratio':>7}  {'reduct%':>7}  {'cross%':>7}")
+    print("-" * 80)
+    for R in radii:
+        t2, t3, te, tc = 0, 0, 0, 0
+        for n in range(1, n_max + 1):
+            p2 = pos_2d(n); p3 = pos_3d(n)
+            edges = generate_edges_by_radius(p2, n, R)
+            ec = len(edges) if edges else n * (n - 1) // 2
+            w2 = total_wirelength(p2, manhattan_2d, n, edges)
+            w3 = total_wirelength(p3, manhattan_3d, n, edges)
+            t2 += w2; t3 += w3; te += ec
+            if edges:
+                tc += sum(1 for i, j in edges if p3[i][2] != p3[j][2])
+            else:
+                c = math.ceil(n / 2); f = n - c; tc += c * f
+        r = t3 / t2 if t2 else 1
+        cp = tc / te * 100 if te else 0
+        rs = "inf" if R is None else str(R)
+        print(f"{rs:>8}  {te:>10}  {t2:>10}  {t3:>10}  {r:>7.4f}  {(1-r)*100:>6.1f}%  {cp:>6.1f}%")
+    print(f"{'='*80}")
+
+
+def plot_radius_comparison(n_max: int = 100, save_path: str | None = None):
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return
+    radii = [2, 3, 5, None]
+    labels = ["R=2", "R=3", "R=5", "R=inf"]
+    reds = {r: [] for r in radii}
+    cross = {r: [] for r in radii}
+    Ns = list(range(1, n_max + 1))
+    for R in radii:
+        for n in Ns:
+            p2 = pos_2d(n); p3 = pos_3d(n)
+            edges = generate_edges_by_radius(p2, n, R)
+            ec = len(edges) if edges else n * (n - 1) // 2
+            w2 = total_wirelength(p2, manhattan_2d, n, edges)
+            w3 = total_wirelength(p3, manhattan_3d, n, edges)
+            reds[R].append((1 - w3/w2) * 100 if w2 else 0)
+            if edges:
+                cc = sum(1 for i, j in edges if p3[i][2] != p3[j][2])
+            else:
+                c = math.ceil(n / 2); f = n - c; cc = c * f
+            cross[R].append(cc / ec * 100 if ec else 0)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    colors = ["#4A90D9", "#E8A040", "#E85D47", "#333333"]
+    for R, lb, co in zip(radii, labels, colors):
+        lw = 2.5 if R is None else 1.2
+        ax1.plot(Ns, reds[R], color=co, lw=lw, alpha=0.9, label=lb)
+        ax2.plot(Ns, cross[R], color=co, lw=lw, alpha=0.9, label=lb)
+    ax1.set_xlabel("N"); ax1.set_ylabel("Reduction (%)")
+    ax1.set_title("WL Reduction vs Connectivity Radius"); ax1.legend(); ax1.grid(True, alpha=0.3)
+    ax2.set_xlabel("N"); ax2.set_ylabel("Cross-die Net (%)")
+    ax2.set_title("Cross-die Proportion vs Connectivity Radius"); ax2.legend(); ax2.grid(True, alpha=0.3)
+    fig.tight_layout()
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+        print(f"Radius comparison plot saved to {save_path}")
     else:
         plt.show()
 
